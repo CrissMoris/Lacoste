@@ -1,0 +1,265 @@
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lacoste</title>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body{
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background-color:#004526;
+}
+
+/* Sağ üst müzik butonu */
+
+.music-btn{
+    position:fixed;
+    top:25px;
+    right:25px;
+
+    width:70px;
+    height:70px;
+
+    border:none;
+    border-radius:50%;
+
+    background:rgba(255,255,255,0.95);
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    cursor:pointer;
+
+    box-shadow:0 8px 20px rgba(0,0,0,.25);
+
+    z-index:9999;
+
+    transition:.2s;
+}
+
+.music-btn:hover{
+    transform:scale(1.1);
+}
+
+.music-btn img{
+    width:42px;
+    height:42px;
+}
+
+/* Kart */
+
+.container{
+    width:90%;
+    max-width:500px;
+
+    background:rgba(255,255,255,0.95);
+
+    backdrop-filter:blur(10px);
+
+    border-radius:20px;
+
+    padding:35px;
+
+    text-align:center;
+
+    box-shadow:0 10px 30px rgba(0,0,0,.2);
+}
+
+.logo{
+    width:180px;
+    margin-bottom:20px;
+}
+
+h1{
+    color:#004526;
+    margin-bottom:10px;
+}
+
+p{
+    color:#555;
+    margin-bottom:25px;
+}
+
+.form-group{
+    margin-bottom:15px;
+    text-align:left;
+}
+
+label{
+    display:block;
+    margin-bottom:6px;
+    font-weight:600;
+    color:#333;
+}
+
+input{
+    width:100%;
+    padding:12px;
+
+    border:1px solid #ccc;
+
+    border-radius:10px;
+
+    font-size:16px;
+
+    transition:.3s;
+}
+
+input:focus{
+    outline:none;
+
+    border-color:#004526;
+
+    box-shadow:0 0 8px rgba(0,69,38,.3);
+}
+
+.btn{
+    width:100%;
+
+    padding:12px;
+
+    background:#004526;
+
+    color:white;
+
+    border:none;
+
+    border-radius:10px;
+
+    font-size:16px;
+
+    cursor:pointer;
+
+    margin-top:10px;
+
+    transition:.3s;
+}
+
+.btn:hover{
+    background:#0056b3;
+}
+
+</style>
+</head>
+
+<body>
+
+
+<button
+    type="button"
+    class="music-btn"
+    onclick="playSound()">
+
+    <img src="images/music.png" alt="Music">
+</button>
+
+
+<div class="container">
+
+    <img
+        src="images/lacoste.png"
+        alt="Lacoste Logo"
+        class="logo">
+
+    <h1>Hoş Geldiniz</h1>
+
+    <p>Lütfen bilgilerinizi giriniz.</p>
+
+    <form id="scoreForm">
+
+        <div class="form-group">
+            <label for="isim">İsim</label>
+            <input
+                type="text"
+                id="isim"
+                placeholder="İsminizi giriniz"
+                required>
+        </div>
+
+        <div class="form-group">
+            <label for="soyisim">Soyisim</label>
+            <input
+                type="text"
+                id="soyisim"
+                placeholder="Soyisminizi giriniz"
+                required>
+        </div>
+
+                <div class="form-group">
+                    <label for="skor">Skor</label>
+                    <input
+                        type="number"
+                        id="skor"
+                        placeholder="Skor giriniz"
+                        min="0"
+                        required>
+                </div>
+                <div class="form-group">
+                    <label for="telefon">Telefon</label>
+                    <input
+                        type="number"
+                        id="telefon"
+                        placeholder="Telefon numaranızı giriniz"
+                        min="0"
+                        required>
+
+        <button
+            type="submit"
+            class="btn">
+            Kaydet
+        </button>
+
+    </form>
+
+</div>
+
+<!--
+  Bu sayfa = iPad GİRİŞ ekranı (part-time görevlinin elinde).
+  Görevi: isim/soyisim/skor girip sunucuya yollamak ve müzik butonunu tetiklemek.
+  Ses bu cihazdan DEĞİL, sunucu üzerinden büyük ekrandan çalar.
+  Not: socket.io yolu mutlak ("/...") yazılmalı; göreli yazılırsa alt yolda kırılır.
+-->
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+const socket = io();
+
+// Müzik büyük ekrandan çalsın diye sunucuya sinyal gönderiyoruz.
+// Burada ses çalmıyoruz; sadece "playSound" olayını yolluyoruz.
+function playSound(){
+    socket.emit("playSound");
+}
+
+// Form gönderilince skoru sunucuya yolla.
+document.getElementById("scoreForm")
+.addEventListener("submit", function(e){
+    e.preventDefault(); // sayfanın yeniden yüklenmesini engelle (SPA gibi davran)
+
+    const name = document.getElementById("isim").value;
+    const surname = document.getElementById("soyisim").value;
+    const score = Number(document.getElementById("skor").value); // input değeri metindir → sayıya çevir
+    const phone = String(document.getElementById("telefon").value); // input değeri metindir → dizeye çevir
+
+
+    socket.emit("newScore", { name, surname, score, phone });
+
+    this.reset(); // formu temizle, sıradaki kişi için hazır olsun
+});
+</script>
+</body>
+</html>
+

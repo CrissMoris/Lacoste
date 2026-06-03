@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lacoste - Veri Tablosu</title>
+
+<style>
+    *{
+        margin:0;
+        padding:0;
+        box-sizing:border-box;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    html, body{
+        height:100%;
+    }
+
+    body{
+        min-height:100vh;
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:flex-start;
+        /* Lacivert zemin (görsel yüklenmezse de düz lacivert kalır) */
+        background:rgba(255,255,255,0.97);
+       
+        padding:3vh 4vw;
+        overflow:hidden;
+    }
+
+    .logo{
+        width:22vw;
+        max-width:320px;
+        margin-bottom:2vh;
+    }
+
+    h1{
+        font-size:5vh;
+        letter-spacing:2px;
+        margin-bottom:3vh;
+        text-shadow:0 2px 10px rgba(0,0,0,.4);
+    }
+
+    #scoreList{
+        width:100%;
+        max-width:1400px;
+        display:flex;
+        flex-direction:column;
+        gap:1.6vh;
+    }
+
+    .row{
+        display:flex;
+        align-items:center;
+        background:rgba(255,255,255,0.97);
+        color:#001a4d;
+        border-radius:18px;
+        padding:2.2vh 3vw;
+        font-size:4.2vh;
+        font-weight:bold;
+        box-shadow:0 8px 24px rgba(0,0,0,.3);
+    }
+
+    .row .rank{
+        flex:0 0 auto;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        width:1.5em;
+        height:1.5em;
+        border-radius:50%;
+        font-size:.95em;
+        color:#0a3d91;
+        background:#e8eef7;
+        box-shadow:inset 0 0 0 2px rgba(0,0,0,.06);
+    }
+
+    /* İlk 3 için madalya rozetleri */
+    .row .rank.gold{
+        color:#5a4500;
+        background:linear-gradient(145deg,#fff1b8,#ffd24a 45%,#e0a300);
+        box-shadow:0 4px 12px rgba(224,163,0,.55), inset 0 2px 3px rgba(255,255,255,.75);
+    }
+    .row .rank.silver{
+        color:#3a3a3a;
+        background:linear-gradient(145deg,#ffffff,#cfd4da 45%,#9aa1a9);
+        box-shadow:0 4px 12px rgba(154,161,169,.55), inset 0 2px 3px rgba(255,255,255,.85);
+    }
+    .row .rank.bronze{
+        color:#4a2600;
+        background:linear-gradient(145deg,#f6c89a,#cd7f32 45%,#8c4f1a);
+        box-shadow:0 4px 12px rgba(140,79,26,.55), inset 0 2px 3px rgba(255,255,255,.55);
+    }
+
+    .row .name{
+        flex:1 1 auto;
+        margin-left:1vw;
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
+    }
+
+    .row .phone{
+        flex:0 0 auto;
+        margin-left:1vw;
+    }
+
+    /* İlk sırayı vurgula */
+    .row.first{
+        background:#ffd24a;
+        transform:scale(1.02);
+    }
+
+    .empty{
+        font-size:3vh;
+        opacity:.7;
+        margin-top:6vh;
+    }
+
+    /* Tarayıcı autoplay kısıtı için tek seferlik başlatma katmanı */
+    #startOverlay{
+        position:fixed;
+        inset:0;
+       background:rgba(255,255,255,0.95);
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:center;
+        cursor:pointer;
+        z-index:99999;
+        text-align:center;
+    }
+    #startOverlay img{ width:24vw; max-width:340px; margin-bottom:4vh; }
+    #startOverlay .hint{ font-size:3vh; opacity:.85; }
+</style>
+</head>
+
+<body>
+
+    <img src="images/lacoste.png" alt="Lacoste Logo" class="logo">
+
+    <h1>VERİ TABLOSU</h1>
+
+    <div id="scoreList"></div>
+
+    <!-- Ekran kurulunca bir kez tıklanır; sonrası için ses kilidi açılır -->
+    <div id="startOverlay">
+        <img src="images/lacoste.png" alt="Lacoste Logo">
+        <div class="hint">Başlamak için ekrana dokunun</div>
+    </div>
+
+    <audio id="bigSound" src="ring.mp3" preload="auto"></audio>
+
+<!--
+  Bu sayfa = 43" BÜYÜK EKRAN. Görevi: skoru göstermek ve sesi çalmak.
+  Veri girişi yok; her şey sunucudan Socket.io olayları ile canlı gelir.
+  Akış:  iPad  →  sunucu  →  (bu ekran)
+    - "currentTop5" : sunucu güncel ilk 5'i yayınlar  → tabloyu çiz
+    - "playSound"   : iPad butonu sesi tetikler        → mp3'ü çal
+-->
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+const socket = io(); // aynı origin'e bağlanır (nginx /socket.io/'yu Node'a proxy'ler)
+const sound = document.getElementById("bigSound");
+
+// Tarayıcılar, kullanıcı etkileşimi OLMADAN ses çalmayı engeller (autoplay politikası).
+// Bu yüzden ekran kurulurken bir kez dokundurup sesi "kilidini açıyoruz":
+// sessizce başlat+durdur → sonraki play() çağrıları artık serbest.
+document.getElementById("startOverlay").addEventListener("click", function(){
+    sound.play().then(() => {
+        sound.pause();
+        sound.currentTime = 0;
+    }).catch(() => {});
+    this.style.display = "none";
+});
+
+// iPad'deki müzik butonu sunucuya sinyal yollar, sunucu da bu ekrana iletir.
+socket.on("playSound", function(){
+    sound.currentTime = 0; // baştan çalsın
+    sound.play().catch(err => console.log("Ses çalınamadı:", err));
+});
+
+// Sayfa açılır açılmaz güncel tabloyu iste (sunucu bağlantıda da gönderir; bu garanti içindir).
+socket.emit("getTop5");
+
+socket.on("currentTop5", function(top5){
+    const list = document.getElementById("scoreList");
+
+    if (!top5 || top5.length === 0){
+        list.innerHTML = '<div class="empty">Henüz skor girilmedi</div>';
+        return;
+    }
+
+    let html = "";
+    top5.forEach((person, index) => {
+        // Ekranda SADECE isim gösterilir. Soyisim iPad'de giriliyor ama
+        // müşteri talebi gereği skor tablosunda yansıtılmıyor.
+        const displayName = person.name || "";
+        const displayPhone = person.phone || "";
+        // İlk 3 sıraya madalya rozeti; 4 ve sonrası rozetsiz (boş sınıf).
+        const medal = index === 0 ? "gold" : index === 1 ? "silver" : index === 2 ? "bronze" : "";
+        html += `
+        <div class="row ${index === 0 ? "first" : ""}">
+            <span class="rank ${medal}">${index + 1}</span>
+            <span class="name">${displayName}</span>
+            <span class="phone">${displayPhone}</span>
+        </div>`;
+    });
+
+    list.innerHTML = html;
+});
+</script>
+</body>
+</html>
