@@ -16,7 +16,8 @@ const server = http.createServer(app);   // Express'i HTTP sunucusuna sarıp...
 const io = new Server(server);           // ...aynı sunucu üzerinde Socket.io'yu çalıştırıyoruz.
 
 // Port'u sabit yazmıyoruz: deploy ortamı (Forge/pm2) PORT'u kendisi verir.
-const PORT = process.env.PORT || 8080;//
+const PORT = process.env.PORT || 3000;//
+server.listen(PORT);
 // /reset yıkıcı bir işlem (tüm skorları siler). Açık internette korumasız kalmasın diye
 // opsiyonel bir anahtar: ADMIN_KEY tanımlıysa ?key=... doğru gelmeden çalışmaz.
 const ADMIN = process.env.ADMIN || "";
