@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lacoste - Veri Tablosu</title>
+<title>Xbox - Veri Tablosu</title>
 
 <style>
     *{
@@ -139,7 +139,7 @@
 
 <body>
 
-    <img src="images/lacoste.png" alt="Lacoste Logo" class="logo">
+    <img src="images/xbox_logo.png" alt="Xbox Logo" class="logo">
 
     <h1>VERİ TABLOSU</h1>
 
@@ -147,7 +147,7 @@
 
     <!-- Ekran kurulunca bir kez tıklanır; sonrası için ses kilidi açılır -->
     <div id="startOverlay">
-        <img src="images/lacoste.png" alt="Lacoste Logo">
+        <img src="images/xbox_logo.png" alt="Xbox Logo">
         <div class="hint">Başlamak için ekrana dokunun</div>
     </div>
 
@@ -189,28 +189,68 @@ socket.emit("getTop5");
 socket.on("currentTop5", function(top5){
     const list = document.getElementById("scoreList");
 
-    if (!top5 || top5.length === 0){
-        list.innerHTML = '<div class="empty">Henüz skor girilmedi</div>';
-        return;
-    }
+   // Eğer sunucudan gelen top5 listesi boşsa veya hiç veri yoksa
+if (!top5 || top5.length === 0) {
 
-    let html = "";
-    top5.forEach((person, index) => {
-        // Ekranda SADECE isim gösterilir. Soyisim iPad'de giriliyor ama
-        // müşteri talebi gereği skor tablosunda yansıtılmıyor.
-        const displayName = person.name || "";
-        const displayPhone = person.phone || "";
-        // İlk 3 sıraya madalya rozeti; 4 ve sonrası rozetsiz (boş sınıf).
-        const medal = index === 0 ? "gold" : index === 1 ? "silver" : index === 2 ? "bronze" : "";
-        html += `
-        <div class="row ${index === 0 ? "first" : ""}">
-            <span class="rank ${medal}">${index + 1}</span>
-            <span class="name">${displayName}</span>
-            <span class="phone">${displayPhone}</span>
-        </div>`;
-    });
+    // Önce mevcut listeyi temizle - !eski skorlar ekranda gözükebilir + ek olarak skr grlmd.. mesajını verir
+    list.innerHTML = "";
 
-    list.innerHTML = html;
+    // Kullanıcıya bilgi vermek için boş mesajı oluştur
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "Henüz skor girilmedi";
+
+    // Mesajı ekrana ekler
+    list.appendChild(empty);
+    return;
+}
+
+// Listeyi yeniden oluşturmak için eski içeriği temizle
+list.innerHTML = "";
+
+/**
+ * Top 5 listesindeki her kişi için satır oluştur
+ * index: sıralama numarası (0,1,2...)
+ * person: kullanıcı bilgileri
+ */
+top5.forEach((person, index) => {
+
+    const displayName = person.name;
+    const displayPhone = person.phone;
+
+    // İlk 3 kişiye madalya sınıfı verir
+    const medal =
+        index === 0 ? "gold" :
+        index === 1 ? "silver" :
+        index === 2 ? "bronze" :
+        "";
+
+    const row = document.createElement("div");
+
+    row.className = `row ${index === 0 ? "first" : ""}`;
+
+    // rank - sıralama 
+    const rank = document.createElement("span"); //sıra numarasını tutar
+    rank.className = `rank ${medal}`;
+    rank.textContent = index + 1; // index 0 dan başlar. 1. sıra içib 0+1
+
+    const name = document.createElement("span");
+    name.className = "name";
+    name.textContent = displayName;
+
+    const phone = document.createElement("span");
+    phone.className = "phone";
+    phone.textContent = displayPhone;
+
+    // Oluşturulan alanları satıra ekler
+    row.appendChild(rank); 
+    row.appendChild(name);
+    row.appendChild(phone);
+
+    // Satırı listeye ekle
+    list.appendChild(row);
+});
+
 });
 </script>
 </body>

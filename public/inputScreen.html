@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lacoste</title>
+<title>Xbox</title>
 
 <style>
 
@@ -20,7 +20,7 @@ body{
     display:flex;
     justify-content:center;
     align-items:center;
-    background-color:#004526;
+    background-color:#107C10;
 }
 
 /* Sağ üst müzik butonu */
@@ -66,7 +66,7 @@ body{
     width:90%;
     max-width:500px;
 
-    background:rgba(255,255,255,0.95);
+    background:rgb(255, 255, 255);
 
     backdrop-filter:blur(10px);
 
@@ -150,7 +150,19 @@ input:focus{
 }
 
 .btn:hover{
-    background:#0056b3;
+   
+    background:#107C10;
+}
+
+.error-message{
+    padding:12px;
+    margin-bottom:15px;
+    background:#f8d7da;
+    color:#721c24;
+    border:1px solid #f5c6cb;
+    border-radius:8px;
+    display:none;
+    text-align:center;
 }
 
 </style>
@@ -171,13 +183,15 @@ input:focus{
 <div class="container">
 
     <img
-        src="images/lacoste.png"
-        alt="Lacoste Logo"
+        src="images/xbox_logo.png"
+        alt="Xbox Logo"
         class="logo">
 
     <h1>Hoş Geldiniz</h1>
 
     <p>Lütfen bilgilerinizi giriniz.</p>
+
+    <div id="errorMsg" class="error-message"></div>
 
     <form id="scoreForm">
 
@@ -210,12 +224,16 @@ input:focus{
                 </div>
                 <div class="form-group">
                     <label for="telefon">Telefon</label>
-                    <input
-                        type="number"
-                        id="telefon"
-                        placeholder="Telefon numaranızı giriniz"
-                        min="0"
-                        required>
+                   <input
+    type="tel"
+    id="telefon"
+    placeholder="5XXXXXXXXX"
+    minlength="10"
+    maxlength="10"
+    required>
+                </div>
+                        
+                        
 
         <button
             type="submit"
@@ -236,28 +254,92 @@ input:focus{
 <script src="/socket.io/socket.io.js"></script>
 
 <script>
+
+document.getElementById("telefon").addEventListener("input", function (e) {
+    this.value = this.value.replace(/[^0-9]/g, "");
+
+    
+
+});
+
+
+
+// Socket.IO bağlantısını başlat
 const socket = io();
 
-// Müzik büyük ekrandan çalsın diye sunucuya sinyal gönderiyoruz.
-// Burada ses çalmıyoruz; sadece "playSound" olayını yolluyoruz.
-function playSound(){
+/**
+ * Hata mesajını ekranda gösterir.
+ * 5 saniye sonra otomatik olarak gizlenir.
+ */
+function showError(msg) {
+    const errorDiv = document.getElementById("errorMsg");
+
+    // Mesajı yazdır
+    errorDiv.textContent = msg;
+
+    // Hata kutusunu görünür yap
+    errorDiv.style.display = "block";
+
+    // 5 saniye sonra gizle
+    setTimeout(() => {
+        errorDiv.style.display = "none";
+    }, 5000);
+}
+
+/**
+ * Sunucudan rate limit (çok fazla istek) hatası gelirse çalışır.
+ */
+socket.on("rateLimitError", (msg) => {
+    console.error("Rate Limit:", msg);
+    showError(msg);
+});
+
+/**
+ * Sunucudan genel hata mesajı gelirse çalışır.
+ */
+socket.on("error", (msg) => {
+    console.error("Hata:", msg);
+    showError(msg);
+});
+
+/**
+ * Aynı isim ve soyisim ile kayıt yapılmaya çalışıldığında çalışır.
+ */
+socket.on("duplicateUser", (msg) => {
+    console.warn("Duplicate user:", msg);
+    showError(msg);
+});
+
+/*sadece sunucuya olay (event) gönderir.*/
+function playSound() {
     socket.emit("playSound");
 }
 
-// Form gönderilince skoru sunucuya yolla.
+
 document.getElementById("scoreForm")
-.addEventListener("submit", function(e){
-    e.preventDefault(); // sayfanın yeniden yüklenmesini engelle (SPA gibi davran)
+.addEventListener("submit", function (e) {
+
+    // Sayfanın yeniden yüklenmesini engelle
+    e.preventDefault();
+
 
     const name = document.getElementById("isim").value;
     const surname = document.getElementById("soyisim").value;
-    const score = Number(document.getElementById("skor").value); // input değeri metindir → sayıya çevir
-    const phone = String(document.getElementById("telefon").value); // input değeri metindir → dizeye çevir
+    const score = Number(document.getElementById("skor").value);
+    const phone = document.getElementById("telefon").value;
+    if (phone.length < 10) {
+        showError("Telefon numarası eksik (10 hane olmalı)");
+        return;
+    }
+    socket.emit("newScore", {
+        name,
+        surname,
+        score,
+        phone
+    });
 
-
-    socket.emit("newScore", { name, surname, score, phone });
-
-    this.reset(); // formu temizle, sıradaki kişi için hazır olsun
+    // Formu temizler
+    this.reset();
 });
 </script>
 </body>
